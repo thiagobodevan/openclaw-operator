@@ -6790,6 +6790,20 @@ func TestEnrichConfigWithGatewayAuth_PreservesUserToken(t *testing.T) {
 	}
 }
 
+func TestEnrichConfigWithGatewayAuth_PreservesStructuredSecretRef(t *testing.T) {
+	configJSON := []byte(`{"gateway":{"auth":{"mode":"token","token":{"source":"env","provider":"default","id":"OPENCLAW_GATEWAY_TOKEN"}}}}`)
+	token := "operator-resolved-token"
+
+	result, err := enrichConfigWithGatewayAuth(configJSON, token)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !bytes.Equal(result, configJSON) {
+		t.Errorf("structured SecretRef should be preserved without materializing the resolved token\ngot:  %s\nwant: %s", string(result), string(configJSON))
+	}
+}
+
 func TestEnrichConfigWithGatewayAuth_EmptyConfig(t *testing.T) {
 	configJSON := []byte(`{}`)
 	token := "my-token"
