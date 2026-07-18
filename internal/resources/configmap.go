@@ -139,8 +139,9 @@ func BuildConfigMapFromBytes(instance *openclawv1alpha1.OpenClawInstance, baseCo
 // enrichConfigWithGatewayAuth injects the gateway token into the config JSON
 // for internal loopback authentication (cron, sessions_spawn). If the user has
 // not set gateway.auth.mode, it also injects mode=token. If the user has already
-// set gateway.auth.token or gateway.auth.mode is trusted-proxy, the config is
-// returned unchanged (user override wins/trusted-proxy is incompatible with tokens).
+// set gateway.auth.token (including a structured OpenClaw SecretRef) or
+// gateway.auth.mode is trusted-proxy, the config is returned unchanged (user
+// override wins/trusted-proxy is incompatible with tokens).
 func enrichConfigWithGatewayAuth(configJSON []byte, token string) ([]byte, error) {
 	var config map[string]interface{}
 	if err := json.Unmarshal(configJSON, &config); err != nil {
@@ -157,9 +158,21 @@ func enrichConfigWithGatewayAuth(configJSON []byte, token string) ([]byte, error
 		auth = make(map[string]interface{})
 	}
 
-	// If the user already set a token, don't override anything
-	if existingToken, ok := auth["token"].(string); ok && existingToken != "" {
-		return configJSON, nil
+	// If the user already set a token, don't override anything. OpenClaw accepts
+	// both literal strings and structured SecretRef objects here. Replacing the
+	// latter with the resolved Kubernetes Secret would persist plaintext in the
+	// operator-managed ConfigMap and on the instance PVC.
+	if existingToken, ok := auth["token"]; ok && existingToken != nil {
+		switch value := existingToken.(type) {
+		case string:
+			if value != "" {
+				return configJSON, nil
+			}
+		case map[string]interface{}:
+			if len(value) > 0 {
+				return configJSON, nil
+			}
+		}
 	}
 
 	// trusted-proxy mode is mutually exclusive with token auth - injecting

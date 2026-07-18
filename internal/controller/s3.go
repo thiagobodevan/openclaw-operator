@@ -39,8 +39,9 @@ const (
 	// BackupSecretName is the name of the Secret containing S3 credentials
 	BackupSecretName = "s3-backup-credentials" // #nosec G101 -- not a credential, just a Secret resource name
 
-	// RcloneImage is the pinned rclone container image
-	RcloneImage = "rclone/rclone:1.68"
+	// RcloneImage is the immutable rclone 1.68 linux/amd64 image used for
+	// production backup jobs on OKE.
+	RcloneImage = "docker.io/rclone/rclone@sha256:74c51b8817e5431bd6d7ed27cb2a50d8ee78d77f6807b72a41ef6f898845942b"
 
 	// AnnotationSkipBackup allows skipping backup on delete
 	AnnotationSkipBackup = "openclaw.rocks/skip-backup"
